@@ -1,0 +1,127 @@
+import sqlite3
+import tkinter as tk
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import pandas
+
+
+
+conn = sqlite3.connect('BicycleDB.db')
+
+c = conn.cursor()
+
+#creates the DB and columns
+c.execute("""CREATE TABLE IF NOT EXISTS BicycleDB (name text, date_col date, distance float, avg_speed float, top_speed float, time float)""")
+
+  
+# function inputs into table user generated data and states that it was entered correctly
+def addRecord():
+  name = name_entry.get()
+  date1 = date_entry.get()
+  distance = float(distance_entry.get())
+  avgSpeed = float(avgSpeed_entry.get())
+  topSpeed = float(topSpeed_entry.get())
+  timeRode = float(timeRode_entry.get())
+  c.execute("""INSERT INTO BicycleDB (name, date_col, distance, avg_speed, top_speed, time) VALUES (?, ?, ?, ?, ?, ?)""", (name , date1, distance, avgSpeed, topSpeed, timeRode))
+  status_label.config(text="Data entered successfully.")
+  conn.commit()
+
+# function removes last record
+def removeRecord():
+  c.execute("""DELETE FROM BicycleDB WHERE date_col = (SELECT MAX(date_col) FROM BicycleDB)""")
+  status_label.config(text="Data removed successfully.")
+  conn.commit()
+  
+  #creates main window
+root = tk.Tk()
+root.title("Bicycle Fitness Tracker")
+
+# labels and entry widgets
+name_label = tk.Label(root, text="Name:")
+name_label.pack()
+name_entry = tk.Entry(root)
+name_entry.pack()
+
+date_label = tk.Label(root, text="Date (YYYY-MM-DD):")
+date_label.pack()
+date_entry = tk.Entry(root)
+date_entry.pack()
+
+distance_label = tk.Label(root, text="Distance:")
+distance_label.pack()
+distance_entry = tk.Entry(root)
+distance_entry.pack()
+
+avgSpeed_label = tk.Label(root, text="Averge Speed:")
+avgSpeed_label.pack()
+avgSpeed_entry = tk.Entry(root)
+avgSpeed_entry.pack()
+
+topSpeed_label = tk.Label(root, text="Top Speed:")
+topSpeed_label.pack()
+topSpeed_entry = tk.Entry(root)
+topSpeed_entry.pack()
+
+timeRode_label = tk.Label(root, text="Time Rode (in minutes):")
+timeRode_label.pack()
+timeRode_entry = tk.Entry(root)
+timeRode_entry.pack()
+
+# add button
+add_button = tk.Button(root, text="Add to Database", command=addRecord)
+add_button.pack()
+
+# add button
+add_button = tk.Button(root, text="Remove last record", command=removeRecord)
+add_button.pack()
+
+
+
+# status label 
+status_label = tk.Label(root, text="")
+status_label.pack()
+
+# Create a Tkinter canvas containing the Matplotlib figure
+fig = Figure(figsize=(5,5), dpi=50)
+ax = fig.add_subplot(111)
+
+fig2 = Figure(figsize=(5,5), dpi=50)
+ax2 = fig2.add_subplot(111)
+
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas.get_tk_widget().pack()
+
+canvas2 = FigureCanvasTkAgg(fig2, master=root)
+canvas2.get_tk_widget().pack()
+
+sql = """SELECT date_col, avg_speed, distance
+FROM BicycleDB
+ORDER BY date_col DESC;"""
+ 
+data = pandas.read_sql(sql, conn)
+
+ax.plot(data['date_col'][::-1], data['avg_speed'][::-1], label='avg speed')
+ax.set_title('Avg Speed Over Time')
+ax.set_xlabel('Date')
+ax.set_ylabel('Average Speed')
+ax.legend()
+
+ax2.plot(data['date_col'][::-1], data['distance'][::-1], label='distance')
+ax2.set_title('Distance Over Time')
+ax2.set_xlabel('Date')
+ax2.set_ylabel('Distance')
+ax2.legend()
+
+# remove x-axis labels
+ax.set_xticklabels([])
+ax2.set_xticklabels([])
+
+canvas.draw()
+
+root.mainloop()
+
+conn.commit()
+
+conn.close()
